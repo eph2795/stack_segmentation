@@ -28,7 +28,7 @@ class TomoDataset:
     def __getitem__(self, idx):
         samples = self.samples[idx]
         image = np.squeeze(samples['features'])[:, :, np.newaxis]
-        mask = np.squeeze(samples['targets'])
+        mask = np.squeeze(samples['targets']) if 'targets' in samples else None
         
         if self.augmentation_fn is not None:
             augmented = self.augmentation_fn(image=image, mask=mask)
@@ -36,13 +36,15 @@ class TomoDataset:
             mask = augmented['mask']
         if self.preprocessing_image_fn is not None:
             image = self.preprocessing_image_fn(image)
-        if self.preprocessing_mask_fn is not None:
+        if (mask is not None) and (self.preprocessing_mask_fn is not None):
             mask = self.preprocessing_mask_fn(mask)
             
-        return {
+        result = {
             'features': image,
-            'targets': mask,
         }
+        if mask is not None:
+            result['targets'] = mask
+        return result
     
     
 def image_process_basic(image, mean=0.3057127, std=0.13275838):
