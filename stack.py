@@ -125,11 +125,12 @@ class Stack:
                                      batch_size=bs,
                                      shuffle=False,
                                      num_workers=num_workers)
-        
-        
-
         offset = 0
-        for (x, _) in tqdm(dataloader):
+        for item in tqdm(dataloader):
+            if isinstance(item, tuple):
+                x, _ = item
+            else:
+                x = item
             logit = model(torch.from_numpy(x).to(device)).cpu().data.numpy()
             probs = softmax(logit)
             if threshold is None:

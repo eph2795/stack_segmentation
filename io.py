@@ -58,17 +58,22 @@ def mask_process_basic(mask):
     return binary
     
 
-def collate_fn_basic(samples, augmentation_pipeline):
+def collate_fn_basic(samples):
     image_samples, gt_samples = [], []
     
     for sample in samples:
-        image, mask = sample['features'], sample['targets']   
+        image = sample['features']
+        if 'targets' in sample:
+            mask = sample['targets']
+            gt_samples.append(mask[np.newaxis, :, :])
         image_samples.append(image[np.newaxis].transpose(0, 3, 1, 2))
-        gt_samples.append(mask[np.newaxis, :, :])
-    
-    image_samples = np.concatenate(image_samples, axis=0).astype(np.float32)
-    gt_samples = np.concatenate(gt_samples, axis=0).astype(np.int64)
-    return image_samples, gt_samples
+    if len(gt_samples) == len(image_samples):
+        gt_samples = np.concatenate(gt_samples, axis=0).astype(np.int64)
+        image_samples = np.concatenate(image_samples, axis=0).astype(np.float32)
+        return image_samples, gt_samples
+    else:
+        image_samples = np.concatenate(image_samples, axis=0).astype(np.float32)
+        return image_samples
 
 
 def make_dataloader(
