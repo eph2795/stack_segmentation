@@ -103,7 +103,7 @@ def make_dataloader(
     
     dataloader = DataLoader(dataset, 
                             batch_size=batch_size,
-                            collate_fn=lambda batch: collate_fn(batch, augmentation_pipeline),
+                            collate_fn=collate_fn,
                             shuffle=shuffle,
                             num_workers=num_workers)
     return dataloader
