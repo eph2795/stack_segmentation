@@ -5,12 +5,15 @@ import numpy as np
 
 import torch
 from torch import nn
-from torch.optim import Adam
+from torch.optim import SGD, Adam, AdamW, RMSprop
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+
+import segmentation_models_pytorch as smp
 
 from .stack import Stack
 from .unet import UNet
 from .early_stopping import EarlyStopping
+from .loss import make_joint_loss
 
 
 def handle_stacks_data(stacks, patches, **kwargs):
@@ -31,11 +34,55 @@ def handle_stacks_data(stacks, patches, **kwargs):
     return data_train, data_val, data_test
 
 
-def make_model(device, lr, factor, patience):
-    model = UNet(in_channels=1, n_classes=2, padding=True).to(device)
-    criterion = nn.CrossEntropyLoss()
-    optimizer = Adam(model.parameters(), lr=lr)
-    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=factor, patience=patience, verbose=True)
+def make_optimizer(
+        opt_type, 
+        parameters, 
+        lr=1e-3, 
+        weight_decay=0, 
+        amsgrad=False, 
+        nesterov=False, 
+        momentum=0.9, 
+        centered=False,
+        **kwargs
+    ):
+    
+    if opt_type == 'SGD':
+        opt = SGD(parameters, lr=lr, momentum=momentum, weight_decay=weight_decay, nesterov=nesterov)
+    elif opt_type == 'Adam':
+        opt = Adam(parameters, lr=lr, weight_decay=weight_decay, amsgrad=amsgrad)
+    elif opt_type == 'AdamW':
+        opt = AdamW(parameters, lr=lr, weight_decay=weight_decay, amsgrad=amsgrad) 
+    elif opt_type == 'RMSprop':
+        opt = RMSprop(parameters, lr=lr, weight_decay=weight_decay, momentum=momentum, centered=centered)
+    return opt
+
+
+
+def make_model(
+        source, 
+        model_type=None, 
+        encoder_name=None, 
+        encoder_weights=None):
+    if source == 'basic':
+        model = UNet(in_channels=1, n_classes=2, padding=True)
+    elif source == 'qubvel':
+        if model_type == 'Unet':
+            model = smp.Unet(encoder_name=encoder_name, encoder_weights=encoder_weights, classes=2, activation=None)
+    else:
+        raise ValueError('Wrong model source!')
+    return model
+    
+    
+def make_optimization_task(
+        device, 
+        model_config,
+        loss_config,
+        optimizer_config,
+        scheduler_config):
+    model = make_model(**model_config).to(device)
+    criterion = make_joint_loss(loss_config, device)
+    optimizer = make_optimizer(parameters=model.parameters(), **optimizer_config)
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', verbose=True, **scheduler_config)
     return model, criterion, optimizer, scheduler
 
 
@@ -50,14 +97,17 @@ def train_loop(
         metrics,
         device, 
         num_epochs,
-        exp_name):
+        exp_name,
+        es_patience=15):
     
     train_losses = []
     val_losses = []
-    es = EarlyStopping(patience=5, verbose=False, delta=2.5e-5, checkpoint_path='{}.pt'.format(exp_name))
+    es = EarlyStopping(patience=es_patience, verbose=False, delta=1e-6, checkpoint_path='{}.pt'.format(exp_name))
         
     for i in range(num_epochs):
         print('Epoch {}...'.format(i))
+        
+        model.train() 
         losses = []
         for x, y in tqdm(dataloader_train):
             x = torch.from_numpy(x).to(device)
@@ -75,7 +125,8 @@ def train_loop(
         print('Mean train loss: {:.5}'.format(np.mean(losses)))
         
         scheduler.step(np.mean(losses))
-            
+        
+        model.eval()
         losses = []
         for x, y in tqdm(dataloader_val):
             x = torch.from_numpy(x).to(device)
@@ -94,6 +145,7 @@ def train_loop(
             break
     
     model.load_state_dict(torch.load('{}.pt'.format(exp_name)))
+    model.eval()
     metrics_dict = dict()
     for stack_name, dataloader_test in dataloaders_test.items():
         
@@ -105,8 +157,8 @@ def train_loop(
             for metric_name, fn in metrics.items():
                 stack_dict[metric_name].append(fn(y, out))
         
-        for metric_name in metrics:
-            metrics_dict[metric_name] = np.array(stack_dict[metric_name])
+#         for metric_name in metrics:
+#             metrics_dict[metric_name] = np.array(stack_dict[metric_name])
         metrics_dict[stack_name] = stack_dict
     
     results = {

@@ -6,15 +6,12 @@ import numpy as np
 import imageio
 from tqdm import tqdm
 
-from catalyst.dl.callbacks import InferCallback    
-
 import torch
 import torchvision.transforms as transforms
-from catalyst.data.augmentor import Augmentor
-from catalyst.dl.utils import UtilsFactory
 
 # TODO: пофиксить ненужную зависимость, тк предсказываю для стека внутри себя
 from .io import collate_fn_basic, make_dataloader
+from .metrics import softmax
 
 
 class Stack:
@@ -22,13 +19,13 @@ class Stack:
     image_subfolder = 'NLM'
     groundtruth_subfolder = 'CAC'
     
-    data_types = ['features', 'targets', 'logits']
+    data_types = ['features', 'targets', 'preds']
     
-    def __init__(self, features, targets=None, logits=None):
+    def __init__(self, features, targets=None, preds=None):
         self.H, self.W, self.D = features.shape
         self.features = features
         self.targets = targets
-        self.logits = logits
+        self.preds = preds
     
     @property
     def shape(self):
@@ -116,36 +113,75 @@ class Stack:
             patches.append(patch)
         return patches
     
-    def apply(self, model, patch_sizes, bs=1, num_workers=16, device='cpu'):
+    def apply(self, model, model_config, patch_sizes, bs=1, num_workers=16, device='cpu', threshold=0.5):
         data = self.slice_up(patch_sizes=patch_sizes)
         
         dataloader = make_dataloader(samples=data, 
                                      collate_fn=collate_fn_basic,
-                                     augmentation_pipeline=None,
-                                     batch_size=1,
+                                     model_config=model_config,
+                                     aug_config=None,
+                                     batch_size=bs,
                                      shuffle=False,
                                      num_workers=num_workers)
         
         
 
-        for i, (x, _) in enumerate(dataloader):
+        offset = 0
+        for (x, _) in tqdm(dataloader):
             logit = model(torch.from_numpy(x).to(device)).cpu().data.numpy()
-            logit = logit - logit.max(axis=1, keepdims=True)
-            exp = np.exp(logit)
-            probs = exp / exp.sum(axis=1, keepdims=True)
-            pred = np.argmax(probs, axis=1)
-            data[i]['logits'] = pred.reshape(patch_sizes)
-
+            probs = softmax(logit)
+            if threshold is None:
+                preds = probs[:, 1]
+            else:
+                preds = (probs[:, 1] > threshold).astype(np.uint8)
+            
+            for i, pred in enumerate(preds):
+                data[i + offset]['preds'] = pred.reshape(patch_sizes)
+            offset += preds.shape[0]
+            
         return self.assembly(self.H, self.W, self.D, data)
     
-    def measure(self, metric, threshold=None):
+    def dump(self, dump_directory, features=False, targets=False, preds=True, threshold=0.5):
+        if not os.path.exists(dump_directory):
+            os.mkdir(dump_directory)
+
+        features_path = os.path.join(dump_directory, 'features')
+        if features:
+            if not os.path.exists(features_path):
+                os.mkdir(features_path)
+
+        targets_path = os.path.join(dump_directory, 'targets')
+        if targets:
+            if not os.path.exists(targets_path):
+                os.mkdir(targets_path)
+
+        preds_path = os.path.join(dump_directory, 'preds')
+        if preds:
+            if not os.path.exists(preds_path):
+                os.mkdir(preds_path)
+
+        for i in tqdm(range(self.features.shape[2])):
+            if features:
+                imageio.imwrite(os.path.join(features_path, 'feats{:04}.bmp'.format(i)), 
+                                self.features[:, :, i].astype(np.uint8))
+            if targets:
+                imageio.imwrite(os.path.join(targets_path, 'targets{:04}.bmp'.format(i)), 
+                                self.targets[:, :, i].astype(np.uint8))
+            if preds:
+                pred = self.preds[:, :, i]
+                if np.issubdtype(pred.dtype, np.floating):
+                    pred = (pred > threshold)
+                pred = np.where(pred, 0, 255).astype(np.uint8)
+                imageio.imwrite(os.path.join(preds_path, 'preds{:04}.bmp'.format(i)), 
+                                pred)
+#     def measure(self, metric, threshold=None):
         
-        if self.logits is None:
-            raise ValueError('There is no prediction for this stack!')
+#         if self.preds is None:
+#             raise ValueError('There is no prediction for this stack!')
         
-        gt = (self.targets / 255).astype(np.int32).flatten()
-        if threshold is not None:
-            pred = (self.logits > threshold).flatten()
-        else:
-            pred = self.logits.flatten()
-        return metric(gt, pred)
+#         gt = (self.targets / 255).astype(np.uint8).flatten()
+#         if threshold is not None:
+#             pred = (self.preds > threshold).flatten()
+#         else:
+#             pred = self.preds.flatten()
+#         return metric(gt, pred)

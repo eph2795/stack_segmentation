@@ -18,9 +18,9 @@ from albumentations import (
 )
 
 
-def soft_aug(original_height=128, original_width=128):
+def soft_aug(original_height=128, original_width=128, k=4):
     aug = Compose([
-        OneOf([RandomSizedCrop(min_max_height=(original_height//4, original_height), 
+        OneOf([RandomSizedCrop(min_max_height=(original_height//k, original_height), 
                                height=original_height, width=original_width, p=0.5),
                PadIfNeeded(min_height=original_height, min_width=original_width, p=0.5)], p=1),    
         VerticalFlip(p=0.5),    
@@ -31,9 +31,9 @@ def soft_aug(original_height=128, original_width=128):
     return aug
 
 
-def medium_aug(original_height=128, original_width=128):
+def medium_aug(original_height=128, original_width=128, k=4):
     aug = Compose([
-        OneOf([RandomSizedCrop(min_max_height=(original_height//4, original_height),
+        OneOf([RandomSizedCrop(min_max_height=(original_height//k, original_height),
                                height=original_height, width=original_width, p=0.5),
                PadIfNeeded(min_height=original_height, min_width=original_width, p=0.5)], p=1),    
         VerticalFlip(p=0.5),    
@@ -49,9 +49,9 @@ def medium_aug(original_height=128, original_width=128):
     return aug
 
 
-def hard_aug(original_height=128, original_width=128): 
+def hard_aug(original_height=128, original_width=128, k=4): 
     aug = Compose([
-        OneOf([RandomSizedCrop(min_max_height=(original_height//4, original_height), 
+        OneOf([RandomSizedCrop(min_max_height=(original_height//k, original_height), 
                                height=original_height, width=original_width, p=0.5),
                PadIfNeeded(min_height=original_height, min_width=original_width, p=0.5)], p=1),    
         VerticalFlip(p=0.5),    
@@ -67,3 +67,16 @@ def hard_aug(original_height=128, original_width=128):
         RandomBrightnessContrast(p=0.8),    
         RandomGamma(p=0.8)])
     return aug
+
+
+def make_aug(aug_type, original_height, original_width, k):
+    if aug_type is None:
+        return
+    elif aug_type == 'soft':
+        return soft_aug(original_height=original_height, original_width=original_width, k=k)
+    elif aug_type == 'medium':
+        return medium_aug(original_height=original_height, original_width=original_width, k=k)
+    elif aug_type == 'hard':
+        return hard_aug(original_height=original_height, original_width=original_width, k=k)
+    else:
+        raise ValueError('Wrong augmentation type!')
