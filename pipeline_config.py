@@ -46,7 +46,6 @@ loss_config = [
 ]
 
 model_config = {
-#     'source': 'basic',
     'source': 'qubvel',
     'model_type': 'Unet',
     'encoder_name': 'resnet50',
@@ -72,5 +71,4 @@ scheduler_config = {
 train_conf = {
     'num_epochs': 200,
     'device': 'cuda:0',
-#     'device': 'cpu',
 }

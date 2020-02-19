@@ -9,7 +9,13 @@ from .aug_pipelines import make_aug
 
 class TomoDataset:
     
-    def __init__(self, samples, augmentation_fn=None, preprocessing_image_fn=None, preprocessing_mask_fn=None):
+    def __init__(
+            self,
+            samples,
+            augmentation_fn=None,
+            preprocessing_image_fn=None,
+            preprocessing_mask_fn=None
+    ):
         self.samples = samples
         self.len = len(samples)
         self.augmentation_fn = augmentation_fn

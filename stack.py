@@ -1,13 +1,11 @@
 import os
 from itertools import product
-import collections
 
 import numpy as np
 import imageio
 from tqdm import tqdm
 
 import torch
-import torchvision.transforms as transforms
 
 # TODO: пофиксить ненужную зависимость, тк предсказываю для стека внутри себя
 from .io import collate_fn_basic, make_dataloader
@@ -59,7 +57,9 @@ class Stack:
         samples = []
         for i, paths in tqdm(files_iterator):
             sample = dict()
-            for folder_path, file_name, im_type in zip(folder_paths, paths, ['features', 'targets']):
+            for folder_path, file_name, im_type in zip(folder_paths,
+                                                       paths,
+                                                       ['features', 'targets']):
                 image = imageio.imread(os.path.join(folder_path, file_name))
                 sample[im_type] = image[:, :, np.newaxis] 
             sample['coordinates'] = [0, 0, i] 
@@ -71,13 +71,14 @@ class Stack:
         H, W = image.shape
             
         return cls.assembly(H, W, D, samples) 
-    
-    
+
     def __getitem__(self, selector):
         if (not isinstance(selector, slice) 
                 and not ((isinstance(selector, tuple) 
-                          and all([isinstance(subarg, slice) or isinstance(subarg, int) for subarg in selector])))):
-            raise ValueError('Wrong slicing type! Must be slice or tuple, got {}'.format(type(selector)))
+                          and all([isinstance(subarg, slice) or isinstance(subarg, int)
+                                   for subarg in selector])))):
+            raise ValueError('Wrong slicing type! Must be slice or tuple, got {type_}'
+                             .format(type_=type(selector)))
         
         kwargs = dict()
         for data_type in self.data_types:
@@ -89,7 +90,8 @@ class Stack:
     def _get_one_dimensional_grid(self, size, patch_size):
         patch_num = size // patch_size + (size % patch_size != 0)
         total_overlap_size = patch_size * patch_num - size
-        max_overlap_size = total_overlap_size // (patch_num - 1) + (total_overlap_size % (patch_num - 1) != 0)
+        max_overlap_size = (total_overlap_size // (patch_num - 1)
+                            + (total_overlap_size % (patch_num - 1) != 0))
         k = total_overlap_size - (patch_num - 1) * (max_overlap_size - 1)
         grid = np.cumsum([0] 
                          + [patch_size - max_overlap_size] * k 
@@ -174,14 +176,3 @@ class Stack:
                 pred = np.where(pred, 0, 255).astype(np.uint8)
                 imageio.imwrite(os.path.join(preds_path, 'preds{:04}.bmp'.format(i)), 
                                 pred)
-#     def measure(self, metric, threshold=None):
-        
-#         if self.preds is None:
-#             raise ValueError('There is no prediction for this stack!')
-        
-#         gt = (self.targets / 255).astype(np.uint8).flatten()
-#         if threshold is not None:
-#             pred = (self.preds > threshold).flatten()
-#         else:
-#             pred = self.preds.flatten()
-#         return metric(gt, pred)
