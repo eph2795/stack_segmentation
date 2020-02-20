@@ -105,7 +105,7 @@ class Stack:
         patch_num = size // patch_size + (size % patch_size != 0)
         total_overlap_size = patch_size * patch_num - size
         max_overlap_size = (total_overlap_size // (patch_num - 1)
-                            + (total_overlap_size % (patch_num - 1) != 0))
+                            + (total_overlap_size % (patch_num - 1) != 0)) if patch_num > 1 else 0
         k = total_overlap_size - (patch_num - 1) * (max_overlap_size - 1)
         grid = np.cumsum([0] 
                          + [patch_size - max_overlap_size] * k 
