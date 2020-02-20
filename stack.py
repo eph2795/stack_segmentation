@@ -44,8 +44,7 @@ class Stack:
                     kwargs[data_type][selector] = data
         
         return cls(**kwargs)
-        
-        
+
     @classmethod
     def read_from_source(cls, folder_name, has_targets=True):
         folder_paths = [os.path.join(folder_name, cls.image_subfolder), 
@@ -86,8 +85,9 @@ class Stack:
             if arg is not None:
                 kwargs[data_type] = arg[selector].copy()
         return self.__class__(**kwargs)
-        
-    def _get_one_dimensional_grid(self, size, patch_size):
+
+    @staticmethod
+    def get_one_dimensional_grid(size, patch_size):
         patch_num = size // patch_size + (size % patch_size != 0)
         total_overlap_size = patch_size * patch_num - size
         max_overlap_size = (total_overlap_size // (patch_num - 1)
@@ -101,7 +101,7 @@ class Stack:
     def slice_up(self, patch_sizes):
         grids = []
         for dim, patch_size in zip([self.H, self.W, self.D], patch_sizes):
-            grids.append(self._get_one_dimensional_grid(dim, patch_size))
+            grids.append(self.get_one_dimensional_grid(dim, patch_size))
                          
         patches = []
         for x, y, z in tqdm(product(*grids)):
