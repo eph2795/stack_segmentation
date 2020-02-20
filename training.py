@@ -112,15 +112,13 @@ def train_loop(
         for x, y in tqdm(dataloader_train):
             x = torch.from_numpy(x).to(device)
             y = torch.from_numpy(y).to(device)
-
-            out = model(x)
-
-            loss = criterion(out, y)
             optimizer.zero_grad()
+            out = model(x)
+            loss = criterion(out, y)
             loss.backward()
             optimizer.step()
-
             losses.append(loss.cpu().data.numpy())
+
         train_losses.append(np.array(losses))
         print('Mean train loss: {:.5}'.format(np.mean(losses)))
         

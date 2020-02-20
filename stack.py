@@ -117,7 +117,6 @@ class Stack:
     
     def apply(self, model, model_config, patch_sizes, bs=1, num_workers=16, device='cpu', threshold=0.5):
         data = self.slice_up(patch_sizes=patch_sizes)
-        
         dataloader = make_dataloader(samples=data, 
                                      collate_fn=collate_fn_basic,
                                      model_config=model_config,
@@ -125,23 +124,31 @@ class Stack:
                                      batch_size=bs,
                                      shuffle=False,
                                      num_workers=num_workers)
-        offset = 0
-        for item in tqdm(dataloader):
-            if isinstance(item, tuple):
-                x, _ = item
-            else:
-                x = item
-            logit = model(torch.from_numpy(x).to(device)).cpu().data.numpy()
-            probs = softmax(logit)
-            if threshold is None:
-                preds = probs[:, 1]
-            else:
-                preds = (probs[:, 1] > threshold).astype(np.uint8)
-            
-            for i, pred in enumerate(preds):
-                data[offset + i]['preds'] = pred.reshape(patch_sizes)
-            offset += preds.shape[0]
-            
+        model.eval()
+        with torch.no_grad():
+            offset = 0
+            for item in tqdm(dataloader):
+
+                def handle_batch():
+                    if isinstance(item, tuple):
+                        x, _ = item
+                    else:
+                        x = item
+                    logit = model(torch.from_numpy(x).to(device)).cpu().data.numpy()
+                    probs = softmax(logit)
+                    if threshold is None:
+                        preds = probs[:, 1]
+                    else:
+                        preds = (probs[:, 1] > threshold).astype(np.uint8)
+                    return preds
+
+                preds = handle_batch()
+                for i, pred in enumerate(preds):
+                    data[offset + i]['preds'] = pred.reshape(patch_sizes)
+                offset += preds.shape[0]
+
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
         return self.assembly(self.H, self.W, self.D, data)
     
     def dump(self, dump_directory, features=False, targets=False, preds=True, threshold=0.5):
