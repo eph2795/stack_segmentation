@@ -16,7 +16,6 @@ class TomoDataset:
             preprocessing_image_fn=None,
             preprocessing_mask_fn=None
     ):
-        self._samples = samples
         self._images = np.concatenate(
             [np.squeeze(sample['features'])[np.newaxis, :, :, np.newaxis]
              for sample in samples],

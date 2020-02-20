@@ -139,7 +139,7 @@ class Stack:
                 preds = (probs[:, 1] > threshold).astype(np.uint8)
             
             for i, pred in enumerate(preds):
-                data[i + offset]['preds'] = pred.reshape(patch_sizes)
+                data[offset + i]['preds'] = pred.reshape(patch_sizes)
             offset += preds.shape[0]
             
         return self.assembly(self.H, self.W, self.D, data)
