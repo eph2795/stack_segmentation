@@ -34,7 +34,7 @@ class TomoDataset:
         self._preprocessing_mask_fn = preprocessing_mask_fn
         
     def __len__(self):
-        return self.len
+        return self._len
     
     def __getitem__(self, idx):
         image = self._images[idx]
