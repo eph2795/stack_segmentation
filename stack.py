@@ -127,7 +127,7 @@ class Stack:
         model.eval()
         with torch.no_grad():
             offset = 0
-            for item in tqdm(dataloader,  miniters=len(dataloader)//100):
+            for item in tqdm(dataloader, mininterval=10, maxinterval=20):
 
                 def handle_batch():
                     if isinstance(item, tuple):
