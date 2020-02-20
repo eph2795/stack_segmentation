@@ -16,28 +16,38 @@ class TomoDataset:
             preprocessing_image_fn=None,
             preprocessing_mask_fn=None
     ):
-        self.samples = samples
-        self.len = len(samples)
-        self.augmentation_fn = augmentation_fn
-        self.preprocessing_image_fn = preprocessing_image_fn
-        self.preprocessing_mask_fn = preprocessing_mask_fn
+        self._samples = samples
+        self._images = np.concatenate(
+            [np.squeeze(sample['features'])[np.neaxies, :, :, np.newaxis]
+             for sample in samples],
+            axis=0)
+        if 'mask' in samples[0]:
+            self._masks = np.concatenate(
+                [np.squeeze(sample['mask'])[np.neaxies, :, :]
+                 for sample in samples],
+                axis=0)
+        else:
+            self._masks = None
+        self._len = len(samples)
+        self._augmentation_fn = augmentation_fn
+        self._preprocessing_image_fn = preprocessing_image_fn
+        self._preprocessing_mask_fn = preprocessing_mask_fn
         
     def __len__(self):
         return self.len
     
     def __getitem__(self, idx):
-        samples = self.samples[idx]
-        image = np.squeeze(samples['features'])[:, :, np.newaxis]
-        mask = np.squeeze(samples['targets']) if 'targets' in samples else None
+        image = self._images[idx]
+        mask = self._masks[idx] if self._masks is not None else None
         
-        if self.augmentation_fn is not None:
-            augmented = self.augmentation_fn(image=image, mask=mask)
+        if self._augmentation_fn is not None:
+            augmented = self._augmentation_fn(image=image, mask=mask)
             image = augmented['image']
             mask = augmented['mask']
-        if self.preprocessing_image_fn is not None:
-            image = self.preprocessing_image_fn(image)
-        if (mask is not None) and (self.preprocessing_mask_fn is not None):
-            mask = self.preprocessing_mask_fn(mask)
+        if self._preprocessing_image_fn is not None:
+            image = self._preprocessing_image_fn(image)
+        if (mask is not None) and (self._preprocessing_mask_fn is not None):
+            mask = self._preprocessing_mask_fn(mask)
             
         result = {
             'features': image,
