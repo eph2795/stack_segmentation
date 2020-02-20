@@ -12,6 +12,20 @@ from .io import collate_fn_basic, make_dataloader
 from .metrics import softmax
 
 
+def handle_batch(item, model, device, threshold):
+    if isinstance(item, tuple):
+        x, _ = item
+    else:
+        x = item
+    logit = model(torch.from_numpy(x).to(device)).cpu().data.numpy()
+    probs = softmax(logit)
+    if threshold is None:
+        preds = probs[:, 1]
+    else:
+        preds = (probs[:, 1] > threshold).astype(np.uint8)
+    return preds
+
+
 class Stack:
     
     image_subfolder = 'NLM'
@@ -128,20 +142,6 @@ class Stack:
         with torch.no_grad():
             offset = 0
             for item in tqdm(dataloader, mininterval=10, maxinterval=20):
-
-                def handle_batch():
-                    if isinstance(item, tuple):
-                        x, _ = item
-                    else:
-                        x = item
-                    logit = model(torch.from_numpy(x).to(device)).cpu().data.numpy()
-                    probs = softmax(logit)
-                    if threshold is None:
-                        preds = probs[:, 1]
-                    else:
-                        preds = (probs[:, 1] > threshold).astype(np.uint8)
-                    return preds
-
                 preds = handle_batch()
                 for i, pred in enumerate(preds):
                     data[offset + i]['preds'] = pred.reshape(patch_sizes)
