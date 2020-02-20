@@ -129,7 +129,16 @@ class Stack:
             patches.append(patch)
         return patches
     
-    def apply(self, model, model_config, patch_sizes, bs=1, num_workers=16, device='cpu', threshold=0.5):
+    def apply(
+            self,
+            model,
+            model_config,
+            patch_sizes,
+            bs=1,
+            num_workers=16,
+            device='cpu',
+            threshold=0.5
+    ):
         data = self.slice_up(patch_sizes=patch_sizes)
         dataloader = make_dataloader(samples=data, 
                                      collate_fn=collate_fn_basic,
@@ -142,7 +151,7 @@ class Stack:
         with torch.no_grad():
             offset = 0
             for item in tqdm(dataloader, mininterval=10, maxinterval=20):
-                preds = handle_batch()
+                preds = handle_batch(item, model, device, threshold)
                 for i, pred in enumerate(preds):
                     data[offset + i]['preds'] = pred.reshape(patch_sizes)
                 offset += preds.shape[0]
