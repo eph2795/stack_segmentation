@@ -1,4 +1,5 @@
 from collections import defaultdict
+import os
 
 from tqdm import tqdm
 import numpy as np
@@ -14,6 +15,24 @@ from .stack import Stack
 from .unet import UNet
 from .early_stopping import EarlyStopping
 from .loss import make_joint_loss
+
+
+def handle_image_data(stacks, **kwargs):
+    data_train, data_val = [], []
+    data_test = dict()
+    for stack_conf in stacks:
+        stack_path=stack_conf['path']
+        images = [os.path.join(stack_path, 'NLM', p)
+                  for p in sorted(os.listdir(os.path.join(stack_path, 'NLM')))]
+        labels = [os.path.join(stack_path, 'CAC', p)
+                  for p in sorted(os.listdir(os.path.join(stack_path, 'CAC')))]
+        train_interval = stack_conf['slice_train'][-1]
+        data_train.extend(list(zip(images[train_interval], labels[train_interval])))
+        val_interval = stack_conf['slice_val'][-1]
+        data_val.extend(list(zip(images[val_interval], labels[val_interval])))
+        train_interval = stack_conf['slice_train'][-1]
+        data_test[stack_path] = list(zip(images[train_interval], labels[train_interval]))
+    return data_train, data_val, data_test
 
 
 def handle_stacks_data(stacks, patches, **kwargs):
@@ -55,7 +74,6 @@ def make_optimizer(
     elif opt_type == 'RMSprop':
         opt = RMSprop(parameters, lr=lr, weight_decay=weight_decay, momentum=momentum, centered=centered)
     return opt
-
 
 
 def make_model(

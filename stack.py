@@ -7,8 +7,6 @@ from tqdm import tqdm
 
 import torch
 
-# TODO: пофиксить ненужную зависимость, тк предсказываю для стека внутри себя
-from .io import collate_fn_basic, make_dataloader
 from .metrics import softmax
 
 
@@ -91,13 +89,13 @@ class Stack:
         patch_num = size // patch_size + (size % patch_size != 0)
         total_overlap_size = patch_size * patch_num - size
         max_overlap_size = (total_overlap_size // (patch_num - 1)
-                            + (total_overlap_size % (patch_num - 1) != 0))
+                            + (total_overlap_size % (patch_num - 1) != 0)) if patch_num > 1 else 0
         k = total_overlap_size - (patch_num - 1) * (max_overlap_size - 1)
         grid = np.cumsum([0] 
                          + [patch_size - max_overlap_size] * k 
                          + [patch_size - max_overlap_size + 1] * (patch_num - k - 1))
         return grid
-    
+
     def slice_up(self, patch_sizes):
         grids = []
         for dim, patch_size in zip([self.H, self.W, self.D], patch_sizes):
@@ -114,43 +112,7 @@ class Stack:
                     patch[data_type] = getattr(self, data_type)[selector]
             patches.append(patch)
         return patches
-    
-    def apply(self, model, model_config, patch_sizes, bs=1, num_workers=16, device='cpu', threshold=0.5):
-        data = self.slice_up(patch_sizes=patch_sizes)
-        dataloader = make_dataloader(samples=data, 
-                                     collate_fn=collate_fn_basic,
-                                     model_config=model_config,
-                                     aug_config=None,
-                                     batch_size=bs,
-                                     shuffle=False,
-                                     num_workers=num_workers)
-        model.eval()
-        with torch.no_grad():
-            offset = 0
-            for item in tqdm(dataloader, mininterval=10, maxinterval=20):
 
-                def handle_batch():
-                    if isinstance(item, tuple):
-                        x, _ = item
-                    else:
-                        x = item
-                    logit = model(torch.from_numpy(x).to(device)).cpu().data.numpy()
-                    probs = softmax(logit)
-                    if threshold is None:
-                        preds = probs[:, 1]
-                    else:
-                        preds = (probs[:, 1] > threshold).astype(np.uint8)
-                    return preds
-
-                preds = handle_batch()
-                for i, pred in enumerate(preds):
-                    data[offset + i]['preds'] = pred.reshape(patch_sizes)
-                offset += preds.shape[0]
-
-        if torch.cuda.is_available():
-            torch.cuda.synchronize()
-        return self.assembly(self.H, self.W, self.D, data)
-    
     def dump(self, dump_directory, features=False, targets=False, preds=True, threshold=0.5):
         if not os.path.exists(dump_directory):
             os.mkdir(dump_directory)
