@@ -5,7 +5,6 @@ from tqdm import tqdm
 import numpy as np
 
 import torch
-from torch import nn
 from torch.optim import SGD, Adam, AdamW, RMSprop
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
@@ -66,15 +65,23 @@ def make_optimizer(
     ):
     
     if opt_type == 'SGD':
-        opt = SGD(parameters, lr=lr, momentum=momentum, weight_decay=weight_decay, nesterov=nesterov)
+        return SGD(parameters,
+                   lr=lr,
+                   momentum=momentum,
+                   weight_decay=weight_decay,
+                   nesterov=nesterov)
     elif opt_type == 'Adam':
-        opt = Adam(parameters, lr=lr, weight_decay=weight_decay, amsgrad=amsgrad)
+        return Adam(parameters, lr=lr, weight_decay=weight_decay, amsgrad=amsgrad)
     elif opt_type == 'AdamW':
-        opt = AdamW(parameters, lr=lr, weight_decay=weight_decay, amsgrad=amsgrad) 
+        return AdamW(parameters, lr=lr, weight_decay=weight_decay, amsgrad=amsgrad)
     elif opt_type == 'RMSprop':
-        opt = RMSprop(parameters, lr=lr, weight_decay=weight_decay, momentum=momentum, centered=centered)
-    return opt
-
+        return RMSprop(parameters,
+                       lr=lr,
+                       weight_decay=weight_decay,
+                       momentum=momentum,
+                       centered=centered)
+    else:
+        raise ValueError('Wrong "opt_type" argument!')
 
 def make_model(
         source, 
@@ -82,13 +89,15 @@ def make_model(
         encoder_name=None, 
         encoder_weights=None):
     if source == 'basic':
-        model = UNet(in_channels=1, n_classes=2, padding=True)
+        return UNet(in_channels=1, n_classes=2, padding=True)
     elif source == 'qubvel':
         if model_type == 'Unet':
-            model = smp.Unet(encoder_name=encoder_name, encoder_weights=encoder_weights, classes=2, activation=None)
+            return smp.Unet(encoder_name=encoder_name,
+                            encoder_weights=encoder_weights,
+                            classes=2,
+                            activation=None)
     else:
         raise ValueError('Wrong model source!')
-    return model
     
     
 def make_optimization_task(
@@ -120,7 +129,10 @@ def train_loop(
     
     train_losses = []
     val_losses = []
-    es = EarlyStopping(patience=es_patience, verbose=False, delta=1e-6, checkpoint_path='{}.pt'.format(exp_name))
+    es = EarlyStopping(patience=es_patience,
+                       verbose=False,
+                       delta=1e-6,
+                       checkpoint_path='{exp_name}.pt'.format(exp_name=exp_name))
         
     for i in range(num_epochs):
         print('Epoch {}...'.format(i))
@@ -172,9 +184,6 @@ def train_loop(
 
             for metric_name, fn in metrics.items():
                 stack_dict[metric_name].append(fn(y, out))
-        
-#         for metric_name in metrics:
-#             metrics_dict[metric_name] = np.array(stack_dict[metric_name])
         metrics_dict[stack_name] = stack_dict
     
     results = {
@@ -183,5 +192,4 @@ def train_loop(
         'val_losses': val_losses,
         'test_metrics': metrics_dict,
     }
-    
     return results
