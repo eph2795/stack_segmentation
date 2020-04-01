@@ -7,21 +7,19 @@ from tqdm import tqdm
 
 import torch
 
-from .metrics import softmax
 
-
-def handle_batch(item, model, device, threshold):
-    if isinstance(item, tuple):
-        x, _ = item
-    else:
-        x = item
-    logit = model(torch.from_numpy(x).to(device)).cpu().data.numpy()
-    probs = softmax(logit)
-    if threshold is None:
-        preds = probs[:, 1]
-    else:
-        preds = (probs[:, 1] > threshold).astype(np.uint8)
-    return preds
+# def handle_batch(item, model, device, threshold):
+#     if isinstance(item, tuple):
+#         x, _ = item
+#     else:
+#         x = item
+#     logit = model(torch.from_numpy(x).to(device)).cpu().data.numpy()
+#     probs = softmax(logit)
+#     if threshold is None:
+#         preds = probs[:, 1]
+#     else:
+#         preds = (probs[:, 1] > threshold).astype(np.uint8)
+#     return preds
 
 
 class Stack:

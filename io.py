@@ -1,7 +1,7 @@
 from itertools import product
 
 import numpy as np
-
+from tqdm import tqdm
 import imageio
 
 import torch
@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader
 from segmentation_models_pytorch.encoders import get_preprocessing_fn
 
 from .stack import Stack
+from .metrics import softmax
 from .aug_pipelines import make_aug
 
 
@@ -244,6 +245,6 @@ def apply(
                 data[offset + i]['preds'] = pred.reshape(patch_sizes)
             offset += preds.shape[0]
 
-    if torch.cuda.is_available():
-        torch.cuda.synchronize()
+    if device.startswith('cuda'):
+        torch.cuda.synchronize(device)
     return stack.assembly(stack.H, stack.W, stack.D, data)
