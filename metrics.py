@@ -1,6 +1,12 @@
 import numpy as np
 
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, average_precision_score
+from sklearn.metrics import (
+    accuracy_score,
+    f1_score,
+    precision_score,
+    recall_score,
+    average_precision_score
+)
 
 
 def softmax(x):

@@ -27,10 +27,12 @@ def handle_image_data(stacks, **kwargs):
                   for p in sorted(os.listdir(os.path.join(stack_path, 'CAC')))]
         train_interval = stack_conf['slice_train'][-1]
         data_train.extend(list(zip(images[train_interval], labels[train_interval])))
-        val_interval = stack_conf['slice_val'][-1]
-        data_val.extend(list(zip(images[val_interval], labels[val_interval])))
-        train_interval = stack_conf['slice_train'][-1]
-        data_test[stack_path] = list(zip(images[train_interval], labels[train_interval]))
+        if 'slice_val' in stack_conf:
+            val_interval = stack_conf['slice_val'][-1]
+            data_val.extend(list(zip(images[val_interval], labels[val_interval])))
+        if 'slice_test' in stack_conf:
+            test_interval = stack_conf['slice_test'][-1]
+            data_test[stack_path] = list(zip(images[test_interval], labels[test_interval]))
     return data_train, data_val, data_test
 
 
@@ -171,25 +173,25 @@ def train_loop(
         es(np.mean(losses), model)
         if es.early_stop:
             break
-    
-    model.load_state_dict(torch.load('{}.pt'.format(exp_name)))
-    model.eval()
-    metrics_dict = dict()
-    for stack_name, dataloader_test in dataloaders_test.items():
-        
-        stack_dict = defaultdict(list)
-        for x, y in tqdm(dataloader_test):
-            x = torch.from_numpy(x).to(device)
-            out = model(x).cpu().data.numpy()
 
-            for metric_name, fn in metrics.items():
-                stack_dict[metric_name].append(fn(y, out))
-        metrics_dict[stack_name] = stack_dict
-    
     results = {
         'model_checkpoint': '{}.pt'.format(exp_name),
         'train_losses': train_losses,
         'val_losses': val_losses,
-        'test_metrics': metrics_dict,
     }
+    if dataloaders_test is not None:
+        model.load_state_dict(torch.load('{}.pt'.format(exp_name)))
+        model.eval()
+        metrics_dict = dict()
+        for stack_name, dataloader_test in dataloaders_test.items():
+
+            stack_dict = defaultdict(list)
+            for x, y in tqdm(dataloader_test):
+                x = torch.from_numpy(x).to(device)
+                out = model(x).cpu().data.numpy()
+
+                for metric_name, fn in metrics.items():
+                    stack_dict[metric_name].append(fn(y, out))
+            metrics_dict[stack_name] = stack_dict
+        results['test_metrics'] = metrics_dict
     return results
