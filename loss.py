@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import torch
 from torch.nn import CrossEntropyLoss
 from torch.nn.modules.loss import _Loss
@@ -15,6 +17,7 @@ class JointLoss(_Loss):
 
     
 def _loss_factory(loss, weight, params, device):
+    params = deepcopy(params)
     if loss == 'BCE':
         if 'weight' in params:
             params['weight'] = torch.FloatTensor(params['weight']).to(device)
