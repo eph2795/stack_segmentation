@@ -85,6 +85,7 @@ def make_optimizer(
     else:
         raise ValueError('Wrong "opt_type" argument!')
 
+
 def make_model(
         source, 
         model_type=None, 
@@ -109,7 +110,9 @@ def make_optimization_task(
         optimizer_config,
         scheduler_config):
     model = make_model(**model_config).to(device)
+    print('Model created')
     criterion = make_joint_loss(loss_config, device)
+    print('Criterion created')
     optimizer = make_optimizer(parameters=model.parameters(), **optimizer_config)
     scheduler = ReduceLROnPlateau(optimizer, mode='min', verbose=True, **scheduler_config)
     return model, criterion, optimizer, scheduler

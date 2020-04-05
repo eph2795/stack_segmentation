@@ -27,9 +27,9 @@ class TomoDataset:
             [np.squeeze(sample['features'])[np.newaxis, :, :, np.newaxis]
              for sample in samples],
             axis=0)
-        if 'mask' in samples[0]:
+        if 'targets' in samples[0]:
             self._masks = np.concatenate(
-                [np.squeeze(sample['mask'])[np.newaxis, :, :]
+                [np.squeeze(sample['targets'])[np.newaxis, :, :]
                  for sample in samples],
                 axis=0)
         else:
