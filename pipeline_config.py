@@ -45,21 +45,44 @@ loss_config = [
 ]
 
 model_config = {
-#     'source': 'basic',
+    # 'source': 'basic',
+    # 'model_type': None,
+    # 'params': {
+    #     'in_channels': 1,
+    #     'num_classes': 2,
+    #     'padding': True
+    # },
     'source': 'qubvel',
     'model_type': 'Unet',
-    'encoder_name': 'resnet101',
-    'encoder_weights': 'imagenet',
+    'params': {
+        'encoder_name': 'resnet101',
+        'encoder_weights': 'imagenet',
+        'classes': 1,
+        'in_channels': 2,
+    }
 }
 
 optimizer_config = {
+    # 'opt_type': 'SGD',
+    # 'params': {
+    #     'lr': 1e-4,
+    #     'weight_decay': 1e-4,
+    #     'nesterov': False,
+    #     'momentum': 0.9
+    # }
+    # 'opt_type': 'RMSprop',
+    # 'params': {
+    #     'lr': 1e-4,
+    #     'weight_decay': 1e-4,
+    #     'momentum': 0.9,
+    #     'centered': False
+    # }
     'opt_type': 'AdamW',
-    'lr': 1e-4,
-    'weight_decay': 1e-4,
-    'amsgrad': False,
-    'nesterov': False,
-    'momentum': 0.9,
-    'centered': False,
+    'params': {
+        'lr': 1e-4,
+        'weight_decay': 1e-4,
+        'amsgrad': False
+    }
 }
 
 scheduler_config = {

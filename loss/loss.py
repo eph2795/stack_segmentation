@@ -5,6 +5,7 @@ from torch.nn import CrossEntropyLoss
 from torch.nn.modules.loss import _Loss
 
 from pytorch_toolbelt.losses import DiceLoss, FocalLoss, LovaszLoss, WeightedLoss
+from .soft_label_ce import SoftLabelCE
 
 
 class JointLoss(_Loss):
@@ -22,6 +23,8 @@ def _loss_factory(loss, weight, params, device):
         if 'weight' in params:
             params['weight'] = torch.FloatTensor(params['weight']).to(device)
         criterion = CrossEntropyLoss(**params)
+    elif loss == 'SoftLabelCE':
+        criterion = SoftLabelCE(**params)
     elif loss == 'Dice':
         criterion = DiceLoss(**params)
     elif loss == 'Focal':

@@ -16,15 +16,20 @@ from .early_stopping import EarlyStopping
 from .loss import make_joint_loss
 
 
-def handle_image_data(stacks, **kwargs):
+def handle_image_data(
+        stacks,
+        images_folder='NLM',
+        labels_folder='CAC',
+        **kwargs
+):
     data_train, data_val = [], []
     data_test = dict()
     for stack_conf in stacks:
         stack_path=stack_conf['path']
-        images = [os.path.join(stack_path, 'NLM', p)
-                  for p in sorted(os.listdir(os.path.join(stack_path, 'NLM')))]
-        labels = [os.path.join(stack_path, 'CAC', p)
-                  for p in sorted(os.listdir(os.path.join(stack_path, 'CAC')))]
+        images = [os.path.join(stack_path, images_folder, p)
+                  for p in sorted(os.listdir(os.path.join(stack_path, images_folder)))]
+        labels = [os.path.join(stack_path, labels_folder, p)
+                  for p in sorted(os.listdir(os.path.join(stack_path, labels_folder)))]
         train_interval = stack_conf['slice_train'][-1]
         data_train.extend(list(zip(images[train_interval], labels[train_interval])))
         if 'slice_val' in stack_conf:
@@ -55,50 +60,33 @@ def handle_stacks_data(stacks, patches, **kwargs):
 
 
 def make_optimizer(
-        opt_type, 
-        parameters, 
-        lr=1e-3, 
-        weight_decay=0, 
-        amsgrad=False, 
-        nesterov=False, 
-        momentum=0.9, 
-        centered=False,
-        **kwargs
+        opt_type,
+        optimized_parameters,
+        params
     ):
-    
+
     if opt_type == 'SGD':
-        return SGD(parameters,
-                   lr=lr,
-                   momentum=momentum,
-                   weight_decay=weight_decay,
-                   nesterov=nesterov)
+        return SGD(params=optimized_parameters, **params)
     elif opt_type == 'Adam':
-        return Adam(parameters, lr=lr, weight_decay=weight_decay, amsgrad=amsgrad)
+        return Adam(params=optimized_parameters, **params)
     elif opt_type == 'AdamW':
-        return AdamW(parameters, lr=lr, weight_decay=weight_decay, amsgrad=amsgrad)
+        return AdamW(params=optimized_parameters, **params)
     elif opt_type == 'RMSprop':
-        return RMSprop(parameters,
-                       lr=lr,
-                       weight_decay=weight_decay,
-                       momentum=momentum,
-                       centered=centered)
+        return RMSprop(params=optimized_parameters, **params)
     else:
         raise ValueError('Wrong "opt_type" argument!')
 
 
 def make_model(
         source, 
-        model_type=None, 
-        encoder_name=None, 
-        encoder_weights=None):
+        model_type,
+        params
+):
     if source == 'basic':
-        return UNet(in_channels=1, n_classes=2, padding=True)
+        return UNet(**params)
     elif source == 'qubvel':
         if model_type == 'Unet':
-            return smp.Unet(encoder_name=encoder_name,
-                            encoder_weights=encoder_weights,
-                            classes=2,
-                            activation=None)
+            return smp.Unet(**params)
     else:
         raise ValueError('Wrong model source!')
     
@@ -113,7 +101,7 @@ def make_optimization_task(
     print('Model created')
     criterion = make_joint_loss(loss_config, device)
     print('Criterion created')
-    optimizer = make_optimizer(parameters=model.parameters(), **optimizer_config)
+    optimizer = make_optimizer(optimized_parameters=model.parameters(), **optimizer_config)
     scheduler = ReduceLROnPlateau(optimizer, mode='min', verbose=True, **scheduler_config)
     return model, criterion, optimizer, scheduler
 
