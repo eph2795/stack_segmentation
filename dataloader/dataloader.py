@@ -23,9 +23,9 @@ def collate_fn_basic(samples):
     image_samples, gt_samples = [], []
 
     for sample in samples:
-        image = sample['features']
-        if 'targets' in sample:
-            mask = sample['targets']
+        image = sample['image']
+        if 'mask' in sample:
+            mask = sample['mask']
             if len(mask.shape) == 3:
                 mask = mask.transpose(2, 0, 1)
             gt_samples.append(mask[np.newaxis])
@@ -47,10 +47,10 @@ def make_dataloader(
         batch_size=32,
         shuffle=True,
         num_workers=8,
-        dataloader_type='inmemory',
+        dataloader_type='in_memory',
         preprocessing_mask_fn=None,
-        image_reading_fn=None,
-        gt_reading_fn=None
+        image_loader=None,
+        mask_loader=None
 ):
     if aug_config is not None:
         augmentation_pipeline = make_aug(**aug_config)
@@ -65,7 +65,7 @@ def make_dataloader(
             pretrained=model_config['params']['encoder_weights']
         )
 
-    if dataloader_type == 'inmemory':
+    if dataloader_type == 'in_memory':
         dataset = PatchDataset(
             samples,
             augmentation_fn=augmentation_pipeline,
@@ -73,11 +73,11 @@ def make_dataloader(
             preprocessing_mask_fn=preprocessing_mask_fn
         )
     elif dataloader_type == 'lazy':
-        dataset = ImageDataset(
-            samples,
+        dataset = ImageDataset.from_samples(
+            samples=samples,
             patch_sizes=patch_sizes,
-            image_reading_fn=image_reading_fn,
-            gt_reading_fn=gt_reading_fn,
+            image_loader=image_loader,
+            mask_loader=mask_loader,
             augmentation_fn=augmentation_pipeline,
             preprocessing_image_fn=preprocessing_image_fn,
             preprocessing_mask_fn=preprocessing_mask_fn
