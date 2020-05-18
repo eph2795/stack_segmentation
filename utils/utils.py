@@ -3,6 +3,15 @@ import os
 from tqdm import tqdm
 import numpy as np
 
+import imageio
+
+
+def basic_loader(img_path):
+    image = imageio.imread(img_path)
+    if len(image.shape) == 2:
+        image = image[:, :, np.newaxis]
+    return image
+
 
 def compress_3d(image: np.array, factor: int):
     indices = np.arange(0, image.shape[0], factor)

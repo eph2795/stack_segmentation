@@ -1,6 +1,6 @@
 tqdm
 numpy
 matplotlib
-imageio
+imageio==2.8.0
 torch
 torchvision

@@ -1,6 +1,6 @@
 from abc import abstractmethod
 
-import imageio
+from ..utils.utils import basic_loader
 
 
 class CustomDataset:
@@ -14,9 +14,9 @@ class CustomDataset:
             preprocessing_mask_fn=None
     ):
         if image_loader is None:
-            image_loader = imageio.imread
+            image_loader = basic_loader
         if mask_loader is None:
-            mask_loader = imageio.imread
+            mask_loader = basic_loader
         self._image_loader = image_loader
         self._mask_loader = mask_loader
         self._augmentation_fn = augmentation_fn

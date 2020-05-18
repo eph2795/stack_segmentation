@@ -13,7 +13,7 @@ import segmentation_models_pytorch as smp
 from .stack import Stack
 from .unet import UNet
 from .early_stopping import EarlyStopping
-from .loss import make_joint_loss
+from .losses import make_joint_loss
 
 
 def handle_image_data(
@@ -133,7 +133,7 @@ def train_loop(
         model.train() 
         losses = []
         for x, y in tqdm(dataloader_train):
-            x = torch.from_numpy(x).to(device)
+            x = torch.from_numpy(x.astype(np.float32)).to(device)
             y = torch.from_numpy(y).to(device)
             optimizer.zero_grad()
             out = model(x)

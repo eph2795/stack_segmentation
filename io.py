@@ -3,8 +3,8 @@ import numpy as np
 
 import torch
 
-from .metrics import softmax
-from .dataloader.dataloader import make_dataloader, collate_fn_basic
+from .utils.functionals import softmax
+from .dataloaders.dataloader import make_dataloader, collate_fn_basic
 
 
 def apply(
@@ -37,7 +37,7 @@ def apply(
                 else:
                     x = item
                 logit = model(torch.from_numpy(x).to(device)).cpu().data.numpy()
-                probs = softmax(logit)
+                probs = softmax(logit, axis=1)
                 if threshold is None:
                     preds = probs[:, 1]
                 else:

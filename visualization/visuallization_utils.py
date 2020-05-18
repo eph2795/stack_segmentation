@@ -11,11 +11,9 @@ def make_df(data, model_name):
     metrics_list = ['accuracy', 'precision', 'recall', 'f1', 'pr_auc', 'iou']
     data = data['test_metrics']
     records = []
-    for s, v in data.items():
-        if s in metrics_list:
-            continue
-        stack_name = s.split('/')[-1]
-        record = {k: v[k][-1] for k in metrics_list}
+    for stack_name, metrics_values in data.items():
+        # stack_name = s.split('/')[-1]
+        record = {k: metrics_values[k][-1] for k in metrics_list}
         record['stack'] = stack_name
         record['model'] = model_name
         records.append(record)
@@ -56,13 +54,28 @@ def fill_image_with_colors(image, n_classes=5):
 
 
 def plot_sample(
-        image,
-        mask,
-        predicted,
-        metrics,
-        n_classes=5,
-        fig_path=None
-):
+        image: np.ndarray,
+        mask: np.ndarray,
+        predicted: np.ndarray,
+        metrics: dict,
+        n_classes: int = 5,
+        fig_path: str = None
+) -> None:
+    """
+    Plot image and mask/model prediction in discrete color map fashion;
+    also compute metrics contained in metrics dict
+
+    Args:
+        image: source image [H x W x C]
+        mask: desired segmentation mask [H х W х С]
+        predicted: predicted segmentation mask [H x W x C]
+        metrics: dict of metrics to calculate
+        n_classes: number of segmentation classes
+        fig_path: path to save figure
+
+    Returns:
+
+    """
     np.set_printoptions(formatter={'float': '{: 0.5f}'.format})
     mask_single_dim = to_single_dim_uint8(mask)
     predicted_single_dim = to_single_dim_uint8(predicted)
@@ -94,4 +107,4 @@ def plot_sample(
     for metric_name, metric_func in metrics.items():
         print('{metric_name:9}: {metric_value}'
               .format(metric_name=metric_name,
-                      metric_value=metric_func(mask, predicted, logits=True, mode=None)))
+                      metric_value=metric_func(mask, predicted)))
