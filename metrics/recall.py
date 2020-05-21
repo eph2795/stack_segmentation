@@ -22,5 +22,5 @@ class Recall(Metric):
         fn = mask * (1 - prediction)
         axes = tuple([i for i in range(len(mask.shape)) if i != self.axis])
         masked_channels = mask.sum(axes) > 0
-        result = tp.sum(axes) / (fn + tp).sum(axes)
+        result = tp.sum(axes) / ((fn + tp).sum(axes) + self.eps)
         return result, masked_channels

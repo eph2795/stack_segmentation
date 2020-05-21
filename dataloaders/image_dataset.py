@@ -47,7 +47,7 @@ def get_grids(image_sizes: Tuple[int, int, int], patch_sizes: Tuple[int, int, in
     Args:
         image_sizes: size of the image, could be any number
             of dimensions  ([H x W], [H x W x D], etc.)
-        patch_sizes: size of patch, for example [H x W x 1]
+        patch_sizes: size of patch, for example [h x w]
 
     Returns:
         selectors: list of selectors for required patches
