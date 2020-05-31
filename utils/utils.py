@@ -39,16 +39,17 @@ def synthetic_to_common_stack(
         synthetic_stack_path: str,
         recon_name: str,
         recon_size: int,
-        original_name: str,
+        original_path: str,
         original_size: int,
         pad_size: int,
         num_classes: int = 5
-):
+) -> str:
     _, synthetic_stack_name = os.path.split(synthetic_stack_path)
-    true_data = np.fromfile(
-        os.path.join(synthetic_stack_path, original_name),
-        dtype=np.uint8
-    ).reshape((original_size, original_size, original_size))
+    true_data = (
+        np
+        .fromfile(original_path,dtype=np.uint8)
+        .reshape((original_size, original_size, original_size))
+    )
     recon_data_padded = np.fromfile(
         os.path.join(synthetic_stack_path, recon_name).format(recon_size=recon_size),
         dtype=np.uint8

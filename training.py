@@ -87,6 +87,8 @@ def make_model(
     elif source == 'qubvel':
         if model_type == 'Unet':
             return smp.Unet(**params)
+        else:
+            raise ValueError('Wrong model type!')
     else:
         raise ValueError('Wrong model source!')
     
@@ -150,7 +152,7 @@ def train_loop(
         model.eval()
         losses = []
         for x, y in tqdm(dataloader_val):
-            x = torch.from_numpy(x).to(device)
+            x = torch.from_numpy(x.astype(np.float32)).to(device)
             y = torch.from_numpy(y).to(device)
 
             out = model(x)
@@ -178,7 +180,7 @@ def train_loop(
 
             stack_dict = defaultdict(list)
             for x, y in tqdm(dataloader_test):
-                x = torch.from_numpy(x).to(device)
+                x = torch.from_numpy(x.astype(np.float32)).to(device)
                 out = model(x).cpu().data.numpy()
 
                 for metric_name, fn in metrics.items():
