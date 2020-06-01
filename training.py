@@ -148,18 +148,20 @@ def train_loop(
         print('Mean train loss: {:.5}'.format(np.mean(losses)))
         
         scheduler.step(np.mean(losses))
-        
+
         model.eval()
-        losses = []
-        for x, y in tqdm(dataloader_val):
-            x = torch.from_numpy(x.astype(np.float32)).to(device)
-            y = torch.from_numpy(y).to(device)
+        torch.cuda.empty_cache()
+        with torch.no_grad():
+            losses = []
+            for x, y in tqdm(dataloader_val):
+                x = torch.from_numpy(x.astype(np.float32)).to(device)
+                y = torch.from_numpy(y).to(device)
 
-            out = model(x)
+                out = model(x)
 
-            loss = criterion(out, y)
+                loss = criterion(out, y)
 
-            losses.append(loss.cpu().data.numpy())
+                losses.append(loss.cpu().data.numpy())
         val_losses.append(np.array(losses))
         print('Mean val loss: {:.5}'.format(np.mean(losses)))
         
@@ -175,16 +177,17 @@ def train_loop(
     if dataloaders_test is not None:
         model.load_state_dict(torch.load('{}.pt'.format(exp_name)))
         model.eval()
+        torch.cuda.empty_cache()
         metrics_dict = dict()
-        for stack_name, dataloader_test in dataloaders_test.items():
+        with torch.no_grad():
+            for stack_name, dataloader_test in dataloaders_test.items():
+                stack_dict = defaultdict(list)
+                for x, y in tqdm(dataloader_test):
+                    x = torch.from_numpy(x.astype(np.float32)).to(device)
+                    out = model(x).cpu().data.numpy()
 
-            stack_dict = defaultdict(list)
-            for x, y in tqdm(dataloader_test):
-                x = torch.from_numpy(x.astype(np.float32)).to(device)
-                out = model(x).cpu().data.numpy()
-
-                for metric_name, fn in metrics.items():
-                    stack_dict[metric_name].append(fn(y, out))
-            metrics_dict[stack_name] = stack_dict
+                    for metric_name, fn in metrics.items():
+                        stack_dict[metric_name].append(fn(y, out))
+                metrics_dict[stack_name] = stack_dict
         results['test_metrics'] = metrics_dict
     return results
