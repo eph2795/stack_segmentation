@@ -1,6 +1,8 @@
 from abc import abstractmethod
 
-from ..utils.utils import basic_loader
+import numpy as np
+
+from ..utils.utils import basic_loader, get_patch_coordinates
 
 
 class CustomDataset:
@@ -65,3 +67,88 @@ class CustomDataset:
         if mask is not None:
             result['mask'] = mask
         return result
+
+
+class PatchDataset:
+
+    def __init__(
+            self,
+            data,
+            ground_truth,
+            batch_size,
+            augmentation_fn=None,
+            preprocessing_image_fn=None,
+            preprocessing_mask_fn=None,
+            postprocessing_image_fn=None,
+            postprocessing_mask_fn=None
+    ):
+        self.data = data
+        self.ground_truth = ground_truth
+
+        self.batch_size = batch_size
+        self.augmentation_fn = augmentation_fn
+        self.preprocessing_image_fn = preprocessing_image_fn
+        self.preprocessing_mask_fn = preprocessing_mask_fn
+        self.postprocessing_image_fn = postprocessing_image_fn
+        self.postprocessing_mask_fn = postprocessing_mask_fn
+
+        self.h, self.w, self.d = data.shape
+        self._len = (
+                self.get_dim_size(self.h, self.w, self.d, batch_size, dim=0)
+                + self.get_dim_size(self.h, self.w, self.d, batch_size, dim=1)
+                + self.get_dim_size(self.h, self.w, self.d, batch_size, dim=2)
+        )
+
+    @staticmethod
+    def get_dim_size(h, w, d, batch_size, dim):
+        if h < batch_size:
+            raise ValueError('h < batch_size')
+        if w < batch_size:
+            raise ValueError('w < batch_size')
+        if d < batch_size:
+            raise ValueError('d < batch_size')
+
+        if dim == 0:
+            w = w - batch_size
+            d = d - batch_size
+        elif dim == 1:
+            h = h - batch_size
+            d = d - batch_size
+        elif dim == 2:
+            h = h - batch_size
+            w = w - batch_size
+        else:
+            raise ValueError('dim value must be 0, 1 or 2')
+        return h * w * d
+
+    def __len__(self):
+        return self._len
+
+    def __getitem__(self, idx):
+        x, y, z, dim = get_patch_coordinates(self.h, self.w, self.d, self.batch_size, idx)
+        selector_x = slice(x, x + self.batch_size)
+        selector_y = slice(y, y + self.batch_size)
+        selector_z = slice(z, z + self.batch_size)
+        if dim == 0:
+            selector_x = slice(x, x + 1)
+        elif dim == 1:
+            selector_y = slice(y, y + 1)
+        elif dim == 2:
+            selector_z = slice(z, z + 1)
+
+        data_patch = np.squeeze(self.data[selector_x, selector_y, selector_z])
+        gt_patch = np.squeeze(self.ground_truth[selector_x, selector_y, selector_z])
+        if self.preprocessing_image_fn is not None:
+            data_patch = self.preprocessing_image_fn(data_patch)
+        if self.preprocessing_mask_fn is not None:
+            gt_patch = self.preprocessing_mask_fn(gt_patch)
+        if self.augmentation_fn is not None:
+            augmented = self.augmentation_fn(image=data_patch, mask=gt_patch)
+            data_patch = augmented['image']
+            gt_patch = augmented['mask']
+        if self.postprocessing_image_fn is not None:
+            data_patch = self.postprocessing_image_fn(data_patch)
+        if self.postprocessing_mask_fn is not None:
+            gt_patch = self.postprocessing_mask_fn(gt_patch)
+
+        return data_patch, gt_patch

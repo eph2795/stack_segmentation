@@ -4,6 +4,27 @@ from tqdm import tqdm
 import numpy as np
 
 import imageio
+from skimage.transform import downscale_local_mean
+
+
+def downscale(stack, scale=6):
+    downscaled_2d = np.zeros(
+        shape=(stack.shape[0] // scale, stack.shape[1] // scale, stack.shape[2]),
+        dtype=np.uint8
+    )
+    for i in tqdm(range(stack.shape[2])):
+        image = stack[:, :, i]
+        image_downscaled = downscale_local_mean(image, (scale, scale))
+        downscaled_2d[:, :, i] = image_downscaled
+    downscaled = np.zeros(
+        shape=(stack.shape[0] // scale, stack.shape[1] // scale, stack.shape[2] // scale),
+        dtype=np.uint8
+    )
+    for i in tqdm(range(downscaled_2d.shape[0])):
+        image = downscaled_2d[i]
+        image_downscaled = downscale_local_mean(image, (1, scale))
+        downscaled[i] = image_downscaled
+    return downscaled
 
 
 def basic_loader(img_path):
@@ -72,3 +93,55 @@ def synthetic_to_common_stack(
     for i, slice_ in tqdm(enumerate(recon_data)):
         slice_.tofile(os.path.join(data_path, '{:05}.bin'.format(i)))
     return stack_path
+
+
+def get_patch_index(h, w, d, batch_size, x, y, z, dim):
+    if dim == 0:
+        w = w - batch_size
+        d = d - batch_size
+        offset = 0
+    elif dim == 1:
+        offset = h * (w - batch_size) * (d - batch_size)
+        h = h - batch_size
+        d = d - batch_size
+    elif dim == 2:
+        offset = h * (w - batch_size) * (d - batch_size) + (h - batch_size) * w * (d - batch_size)
+        h = h - batch_size
+        w = w - batch_size
+    else:
+        raise ValueError("dim param must be 0, 1 or 2")
+    if x > h:
+        raise ValueError("x > h, {} > {}".format(x, h))
+    if y > w:
+        raise ValueError("y > w, {} > {}".format(y, w))
+    if z > d:
+        raise ValueError("z > d, {} > {}".format(z, d))
+    return offset + x * w * d + y * d + z
+
+
+def get_patch_coordinates(h, w, d, batch_size, idx):
+    first_dim_size = h * (w - batch_size) * (d - batch_size)
+    second_dim_size = (h - batch_size) * w * (d - batch_size)
+    third_dim_size = (h - batch_size) * (w - batch_size) * d
+
+    if idx < first_dim_size:
+        w = w - batch_size
+        d = d - batch_size
+        dim = 0
+    elif idx < first_dim_size + second_dim_size:
+        h = h - batch_size
+        d = d - batch_size
+        dim = 1
+        idx = idx - first_dim_size
+    elif idx < first_dim_size + second_dim_size + third_dim_size:
+        h = h - batch_size
+        w = w - batch_size
+        dim = 2
+        idx = idx - first_dim_size - second_dim_size
+    else:
+        raise ValueError('idx > total number of patches')
+    x = idx // (w * d)
+    residual = idx % (w * d)
+    y = residual // d
+    z = idx % d
+    return x, y, z, dim

@@ -5,8 +5,6 @@ import numpy as np
 import imageio
 from tqdm import tqdm
 
-import torch
-
 
 class Stack:
     
@@ -42,20 +40,40 @@ class Stack:
         return cls(**kwargs)
 
     @classmethod
-    def read_from_source(cls, folder_name, has_targets=True):
-        folder_paths = [os.path.join(folder_name, cls.image_subfolder), 
-                        os.path.join(folder_name, cls.groundtruth_subfolder)]
+    def read_from_source(
+            cls,
+            folder_name,
+            has_targets=True,
+            image_subfolder=None,
+            image_reader=None,
+            groundtruth_subfolder=None,
+            groundtruth_reader=None
+    ):
+        if image_subfolder is None:
+            image_subfolder = cls.image_subfolder
+        if image_reader is None:
+            image_reader = imageio.imread
+        if groundtruth_subfolder is None:
+            groundtruth_subfolder = cls.groundtruth_subfolder
+        if groundtruth_reader is None:
+            groundtruth_reader = imageio.imread
+        folder_paths = [os.path.join(folder_name, image_subfolder),
+                        os.path.join(folder_name, groundtruth_subfolder)]
         if not has_targets:
             folder_paths = folder_paths[:1]
         files_iterator = enumerate(zip(*(sorted(os.listdir(fpath)) for fpath in folder_paths)))            
        
         samples = []
+        readers = {
+            'features': image_reader,
+            'targets': groundtruth_reader
+        }
         for i, paths in tqdm(files_iterator):
             sample = dict()
             for folder_path, file_name, im_type in zip(folder_paths,
                                                        paths,
                                                        ['features', 'targets']):
-                image = imageio.imread(os.path.join(folder_path, file_name))
+                image = readers[im_type](os.path.join(folder_path, file_name))
                 sample[im_type] = image[:, :, np.newaxis] 
             sample['coordinates'] = [0, 0, i] 
             samples.append(sample)
