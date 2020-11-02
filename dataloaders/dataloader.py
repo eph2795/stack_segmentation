@@ -5,18 +5,9 @@ from torch.utils.data import DataLoader
 from segmentation_models_pytorch.encoders import get_preprocessing_fn
 
 from ..aug_pipelines import make_aug
+from ..utils.image_processing import image_process_basic
 from .image_dataset import ImageDataset
 from .patch_dataset import PatchDataset
-
-
-def image_process_basic(image, mean=0.3057127, std=0.13275838):
-    normalized = ((image / 255 - mean) / std).astype(np.float32)
-    return normalized
-
-
-def mask_process_basic(mask):
-    binary = np.where(mask == 255, 0, 1).astype(np.int64)
-    return binary
 
 
 def collate_fn_basic(samples):

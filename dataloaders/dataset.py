@@ -75,7 +75,7 @@ class PatchDataset:
             self,
             data,
             ground_truth,
-            batch_size,
+            patch_size,
             augmentation_fn=None,
             preprocessing_image_fn=None,
             preprocessing_mask_fn=None,
@@ -85,7 +85,7 @@ class PatchDataset:
         self.data = data
         self.ground_truth = ground_truth
 
-        self.batch_size = batch_size
+        self.patch_size = patch_size
         self.augmentation_fn = augmentation_fn
         self.preprocessing_image_fn = preprocessing_image_fn
         self.preprocessing_mask_fn = preprocessing_mask_fn
@@ -94,29 +94,29 @@ class PatchDataset:
 
         self.h, self.w, self.d = data.shape
         self._len = (
-                self.get_dim_size(self.h, self.w, self.d, batch_size, dim=0)
-                + self.get_dim_size(self.h, self.w, self.d, batch_size, dim=1)
-                + self.get_dim_size(self.h, self.w, self.d, batch_size, dim=2)
+                self.get_dim_size(self.h, self.w, self.d, patch_size, dim=0)
+                + self.get_dim_size(self.h, self.w, self.d, patch_size, dim=1)
+                + self.get_dim_size(self.h, self.w, self.d, patch_size, dim=2)
         )
 
     @staticmethod
-    def get_dim_size(h, w, d, batch_size, dim):
-        if h < batch_size:
-            raise ValueError('h < batch_size')
-        if w < batch_size:
-            raise ValueError('w < batch_size')
-        if d < batch_size:
-            raise ValueError('d < batch_size')
+    def get_dim_size(h, w, d, patch_size, dim):
+        if h < patch_size:
+            raise ValueError('h < patch_size')
+        if w < patch_size:
+            raise ValueError('w < patch_size')
+        if d < patch_size:
+            raise ValueError('d < patch_size')
 
         if dim == 0:
-            w = w - batch_size
-            d = d - batch_size
+            w = w - patch_size
+            d = d - patch_size
         elif dim == 1:
-            h = h - batch_size
-            d = d - batch_size
+            h = h - patch_size
+            d = d - patch_size
         elif dim == 2:
-            h = h - batch_size
-            w = w - batch_size
+            h = h - patch_size
+            w = w - patch_size
         else:
             raise ValueError('dim value must be 0, 1 or 2')
         return h * w * d
@@ -125,10 +125,10 @@ class PatchDataset:
         return self._len
 
     def __getitem__(self, idx):
-        x, y, z, dim = get_patch_coordinates(self.h, self.w, self.d, self.batch_size, idx)
-        selector_x = slice(x, x + self.batch_size)
-        selector_y = slice(y, y + self.batch_size)
-        selector_z = slice(z, z + self.batch_size)
+        x, y, z, dim = get_patch_coordinates(self.h, self.w, self.d, self.patch_size, idx)
+        selector_x = slice(x, x + self.patch_size)
+        selector_y = slice(y, y + self.patch_size)
+        selector_z = slice(z, z + self.patch_size)
         if dim == 0:
             selector_x = slice(x, x + 1)
         elif dim == 1:

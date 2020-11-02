@@ -95,19 +95,19 @@ def synthetic_to_common_stack(
     return stack_path
 
 
-def get_patch_index(h, w, d, batch_size, x, y, z, dim):
+def get_patch_index(h, w, d, patch_size, x, y, z, dim):
     if dim == 0:
-        w = w - batch_size
-        d = d - batch_size
+        w = w - patch_size
+        d = d - patch_size
         offset = 0
     elif dim == 1:
-        offset = h * (w - batch_size) * (d - batch_size)
-        h = h - batch_size
-        d = d - batch_size
+        offset = h * (w - patch_size) * (d - patch_size)
+        h = h - patch_size
+        d = d - patch_size
     elif dim == 2:
-        offset = h * (w - batch_size) * (d - batch_size) + (h - batch_size) * w * (d - batch_size)
-        h = h - batch_size
-        w = w - batch_size
+        offset = h * (w - patch_size) * (d - patch_size) + (h - patch_size) * w * (d - patch_size)
+        h = h - patch_size
+        w = w - patch_size
     else:
         raise ValueError("dim param must be 0, 1 or 2")
     if x > h:
@@ -119,23 +119,23 @@ def get_patch_index(h, w, d, batch_size, x, y, z, dim):
     return offset + x * w * d + y * d + z
 
 
-def get_patch_coordinates(h, w, d, batch_size, idx):
-    first_dim_size = h * (w - batch_size) * (d - batch_size)
-    second_dim_size = (h - batch_size) * w * (d - batch_size)
-    third_dim_size = (h - batch_size) * (w - batch_size) * d
+def get_patch_coordinates(h, w, d, patch_size, idx):
+    first_dim_size = h * (w - patch_size) * (d - patch_size)
+    second_dim_size = (h - patch_size) * w * (d - patch_size)
+    third_dim_size = (h - patch_size) * (w - patch_size) * d
 
     if idx < first_dim_size:
-        w = w - batch_size
-        d = d - batch_size
+        w = w - patch_size
+        d = d - patch_size
         dim = 0
     elif idx < first_dim_size + second_dim_size:
-        h = h - batch_size
-        d = d - batch_size
+        h = h - patch_size
+        d = d - patch_size
         dim = 1
         idx = idx - first_dim_size
     elif idx < first_dim_size + second_dim_size + third_dim_size:
-        h = h - batch_size
-        w = w - batch_size
+        h = h - patch_size
+        w = w - patch_size
         dim = 2
         idx = idx - first_dim_size - second_dim_size
     else:
@@ -145,3 +145,32 @@ def get_patch_coordinates(h, w, d, batch_size, idx):
     y = residual // d
     z = idx % d
     return x, y, z, dim
+
+
+def get_stack_data(
+        read_func,
+        p,
+        stack_name,
+        initial_stack_size=1000,
+        stack_size=200,
+        detector_size=300,
+        source_name='image3d5phases_1000.raw'
+):
+    data_name = '{stack_name}_{detector_size}_{stack_size}.bin'.format(
+        stack_name=stack_name,
+        detector_size=detector_size,
+        stack_size=stack_size
+    )
+    ground_truth = read_func(
+        path=os.path.join(p, stack_name, source_name),
+        sizes=(initial_stack_size, initial_stack_size, initial_stack_size),
+        data_type=np.uint8
+    )
+    scale = initial_stack_size // stack_size
+    ground_truth_scaled = downscale(ground_truth, scale=scale)
+    data = read_func(
+        path=os.path.join(p, stack_name, data_name),
+        sizes=(stack_size, stack_size, stack_size),
+        data_type=np.float32
+    )
+    return data, ground_truth_scaled

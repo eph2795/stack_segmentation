@@ -120,7 +120,9 @@ def train_loop(
         device, 
         num_epochs,
         exp_name,
-        es_patience=15):
+        es_patience=15,
+        channels_first=False
+):
     
     train_losses = []
     val_losses = []
@@ -156,7 +158,10 @@ def train_loop(
             for x, y in tqdm(dataloader_val):
                 x = torch.from_numpy(x.astype(np.float32)).to(device)
                 y = torch.from_numpy(y).to(device)
-
+                if not channels_first:
+                    x = x.permute(0, 3, 1, 2)
+                    if len(y.size()) == 4:
+                        y = y.permute(0, 3, 1, 2)
                 out = model(x)
 
                 loss = criterion(out, y)
