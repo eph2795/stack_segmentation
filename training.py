@@ -137,8 +137,16 @@ def train_loop(
         model.train() 
         losses = []
         for x, y in tqdm(dataloader_train):
-            x = torch.from_numpy(x.astype(np.float32)).to(device)
-            y = torch.from_numpy(y).to(device)
+            if isinstance(x, np.ndarray):
+                x = torch.from_numpy(x.astype(np.float32))
+            x = x.to(device)
+            if isinstance(y, np.ndarray):
+                y = torch.from_numpy(y)
+            y = y.to(device)
+            if not channels_first:
+                x = x.permute(0, 3, 1, 2)
+                if len(y.size()) == 4:
+                    y = y.permute(0, 3, 1, 2)
             optimizer.zero_grad()
             out = model(x)
             loss = criterion(out, y)
@@ -156,8 +164,12 @@ def train_loop(
         with torch.no_grad():
             losses = []
             for x, y in tqdm(dataloader_val):
-                x = torch.from_numpy(x.astype(np.float32)).to(device)
-                y = torch.from_numpy(y).to(device)
+                if isinstance(x, np.ndarray):
+                    x = torch.from_numpy(x.astype(np.float32))
+                x = x.to(device)
+                if isinstance(y, np.ndarray):
+                    y = torch.from_numpy(y)
+                y = y.to(device)
                 if not channels_first:
                     x = x.permute(0, 3, 1, 2)
                     if len(y.size()) == 4:

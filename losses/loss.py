@@ -24,6 +24,8 @@ def _loss_factory(loss, weight, params, device):
             params['weight'] = torch.FloatTensor(params['weight']).to(device)
         criterion = CrossEntropyLoss(**params)
     elif loss == 'SoftLabelCE':
+        if 'weight' in params:
+            params['weight'] = torch.FloatTensor(params['weight']).to(device)
         criterion = SoftLabelCE(**params)
     elif loss == 'Dice':
         criterion = DiceLoss(**params)
